@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "291566476876",
+    "project_id": "unityfirebasetest-f781f",
+    "storage_bucket": "unityfirebasetest-f781f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:291566476876:android:51eec7e80ed0f2f44ddee9",
+        "android_client_info": {
+          "package_name": "com.Mogun.UnityFirebaseTest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "291566476876-d3rb4gkrc68k6427vkgp3qhvtkagn2tm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Mogun.UnityFirebaseTest",
+            "certificate_hash": "31ae01b397901847b4a9c1c89dbd0c660d7c13c1"
+          }
+        },
+        {
+          "client_id": "291566476876-gsn5ofpikir2s34t120a24dpr9qub0vg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7RX_Xe3e4-oqqCHjFrB7m3KXINy0gC3Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "291566476876-gsn5ofpikir2s34t120a24dpr9qub0vg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

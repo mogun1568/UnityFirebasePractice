@@ -1,0 +1,1 @@
+C:\Users\kmg3329\Documents\GitHub\UnityFirebaseTest\UnityFirebaseTest\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\build\intermediates\cxx\RelWithDebInfo\2h305ij6\obj\arm64-v8a
