@@ -61,11 +61,18 @@ namespace SignInSample
 
         public void OnSignIn()
         {
+            AddToInformation("Calling SignIn");
+
+            if (auth.CurrentUser != null)
+            {
+                AddToInformation("Already signed in as: " + auth.CurrentUser.DisplayName);
+                return;  // 이미 로그인된 경우 함수 종료
+            }
+
             GoogleSignIn.Configuration = configuration;
             GoogleSignIn.Configuration.UseGameSignIn = false;
             GoogleSignIn.Configuration.RequestIdToken = true;
             GoogleSignIn.Configuration.RequestEmail = true;
-            AddToInformation("Calling SignIn");
 
             GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthenticationFinished, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -73,13 +80,30 @@ namespace SignInSample
         public void OnSignOut()
         {
             AddToInformation("Calling SignOut");
+
+            if (auth.CurrentUser == null)
+            {
+                AddToInformation("No user is signed in.");
+                return; // 로그인된 사용자가 없으면 종료
+            }
+
+            auth.SignOut();
             GoogleSignIn.DefaultInstance.SignOut();
         }
 
+        // 안됨
         public void OnDisconnect()
         {
             AddToInformation("Calling Disconnect");
+
+            if (auth.CurrentUser == null)
+            {
+                AddToInformation("No user is signed in.");
+                return; // 로그인된 사용자가 없으면 종료
+            }
+
             GoogleSignIn.DefaultInstance.Disconnect();
+            auth.SignOut();
         }
 
         internal void OnAuthenticationFinished(Task<GoogleSignInUser> task)
@@ -109,7 +133,7 @@ namespace SignInSample
             {
                 AddToInformation("Welcome: " + task.Result.DisplayName + "!");
                 AddToInformation("Email = " + task.Result.Email);
-                AddToInformation("Google ID Token = " + task.Result.IdToken);
+                //AddToInformation("Google ID Token = " + task.Result.IdToken);
                 SignInWithGoogleOnFirebase(task.Result.IdToken);
             }
         }
@@ -135,10 +159,17 @@ namespace SignInSample
 
         public void OnSignInSilently()
         {
+            AddToInformation("Calling SignIn Silently");
+
             GoogleSignIn.Configuration = configuration;
             GoogleSignIn.Configuration.UseGameSignIn = false;
             GoogleSignIn.Configuration.RequestIdToken = true;
-            AddToInformation("Calling SignIn Silently");
+
+            if (auth.CurrentUser != null)
+            {
+                AddToInformation("Already signed in as: " + auth.CurrentUser.DisplayName);
+                return;  // 이미 로그인된 경우 함수 종료
+            }
 
             GoogleSignIn.DefaultInstance.SignInSilently().ContinueWith(OnAuthenticationFinished, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -155,6 +186,20 @@ namespace SignInSample
             GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthenticationFinished, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        private void AddToInformation(string str) { infoText.text += "\n" + str; }
+        private List<string> messages = new List<string>();
+        void AddToInformation(string text)
+        {
+            if (messages.Count == 5)
+            {
+                messages.RemoveAt(0);
+            }
+            messages.Add(text);
+            string txt = "";
+            foreach (string s in messages)
+            {
+                txt += "\n" + s;
+            }
+            infoText.text = txt;
+        }
     }
 }
