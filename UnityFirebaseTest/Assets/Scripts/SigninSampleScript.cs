@@ -22,6 +22,7 @@ namespace SignInSample
     using Firebase.Auth;
     using Firebase.Database;
     using Google;
+    using Unity.Collections;
     using UnityEngine;
     using UnityEngine.UI;
 
@@ -39,7 +40,7 @@ namespace SignInSample
         // Can be set via the property inspector in the Editor.
         void Awake()
         {
-            configuration = new GoogleSignInConfiguration { WebClientId = webClientId, RequestEmail = true, RequestIdToken = true };
+            configuration = new GoogleSignInConfiguration { WebClientId = webClientId, RequestIdToken = true };
             CheckFirebaseDependencies();
         }
 
@@ -47,23 +48,26 @@ namespace SignInSample
         {
             FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task =>
             {
-                if (task.IsCompleted)
+                if (task.IsCanceled || task.IsFaulted)
                 {
-                    if (task.Result == DependencyStatus.Available)
-                    {
-                        auth = FirebaseAuth.DefaultInstance;
-                        dbReference = FirebaseDatabase.DefaultInstance.RootReference;
-                        AddToInformation("Firebase is initialized successfully.");
-                    }
-                    else
-                        AddToInformation("Could not resolve all Firebase dependencies: " + task.Result.ToString());
+                    AddToInformation("Firebase Initialize Failed: " + task.Exception?.ToString());
+                    return;
+                }
+
+                if (task.Result == DependencyStatus.Available)
+                {
+                    auth = FirebaseAuth.DefaultInstance;
+                    dbReference = FirebaseDatabase.DefaultInstance.RootReference;
+
+                    AddToInformation("Firebase is initialized successfully.");
                 }
                 else
                 {
-                    AddToInformation("Dependency check was not completed. Error : " + task.Exception.Message);
+                    AddToInformation("Could not resolve all Firebase dependencies: " + task.Result.ToString());
                 }
-            });
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
+
 
         public void OnSignIn()
         {
@@ -78,7 +82,6 @@ namespace SignInSample
             GoogleSignIn.Configuration = configuration;
             GoogleSignIn.Configuration.UseGameSignIn = false;
             GoogleSignIn.Configuration.RequestIdToken = true;
-            GoogleSignIn.Configuration.RequestEmail = true;
 
             GoogleSignIn.DefaultInstance.SignIn().ContinueWith(OnAuthenticationFinished, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -138,8 +141,6 @@ namespace SignInSample
             else
             {
                 AddToInformation("Welcome: " + task.Result.DisplayName + "!");
-                AddToInformation("Email = " + task.Result.Email);
-                //AddToInformation("Google ID Token = " + task.Result.IdToken);
                 SignInWithGoogleOnFirebase(task.Result.IdToken);
             }
         }
@@ -150,18 +151,23 @@ namespace SignInSample
 
             auth.SignInWithCredentialAsync(credential).ContinueWith(task =>
             {
-                AggregateException ex = task.Exception;
-                if (ex != null)
+                if (task.IsCanceled || task.IsFaulted)
                 {
-                    if (ex.InnerExceptions[0] is FirebaseException inner && (inner.ErrorCode != 0))
-                        AddToInformation("\nError code = " + inner.ErrorCode + " Message = " + inner.Message);
+                    AddToInformation("Sign-in Failed: " + task.Exception?.ToString());
+                    return;
+                }
+
+                AddToInformation("Sign In Successful.");
+
+                // 인증 완료 후 CurrentUser 확인
+                if (auth.CurrentUser != null)
+                {
+                    AddToInformation("User is signed in: " + auth.CurrentUser.DisplayName);
+                    LoadUserData();  // 사용자 데이터 로드
                 }
                 else
                 {
-                    AddToInformation("Sign In Successful.");
-
-                    // 로그인 후 유저 데이터를 불러옵니다.
-                    LoadUserData();
+                    AddToInformation("CurrentUser is null. Something went wrong.");
                 }
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -170,15 +176,15 @@ namespace SignInSample
         {
             AddToInformation("Calling SignIn Silently");
 
-            GoogleSignIn.Configuration = configuration;
-            GoogleSignIn.Configuration.UseGameSignIn = false;
-            GoogleSignIn.Configuration.RequestIdToken = true;
-
             if (auth.CurrentUser != null)
             {
                 AddToInformation("Already signed in as: " + auth.CurrentUser.DisplayName);
                 return;  // 이미 로그인된 경우 함수 종료
             }
+
+            GoogleSignIn.Configuration = configuration;
+            GoogleSignIn.Configuration.UseGameSignIn = false;
+            GoogleSignIn.Configuration.RequestIdToken = true;
 
             GoogleSignIn.DefaultInstance.SignInSilently().ContinueWith(OnAuthenticationFinished, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -246,7 +252,10 @@ namespace SignInSample
             dbReference.Child("users").Child(userId).SetRawJsonValueAsync(jsonData).ContinueWith(task =>
             {
                 if (task.IsCompleted)
+                {
                     AddToInformation("User data saved successfully.");
+                    LoadUserData();
+                }
                 else
                     AddToInformation("Failed to save user data: " + task.Exception);
             });
@@ -292,15 +301,9 @@ namespace SignInSample
             string userId = user.UserId;
             dbReference.Child("users").Child(userId).GetValueAsync().ContinueWith(task =>
             {
-                if (task.IsFaulted)
+                if (task.IsCanceled || task.IsFaulted)
                 {
-                    AddToInformation("Failed to load data: " + task.Exception);
-                    return;
-                }
-
-                if (task.IsCanceled)
-                {
-                    AddToInformation("Data request was canceled.");
+                    AddToInformation("Failed to load data: " + task.Exception?.ToString());
                     return;
                 }
 
@@ -347,6 +350,8 @@ namespace SignInSample
 
         public void ExampleUpdateUserData()
         {
+            if (!CheckFirebase()) return;
+
             UpdateUserData("gold", 100);
             UpdateUserData("level", 1);
             UpdateUserData("exp", 10);
@@ -355,7 +360,7 @@ namespace SignInSample
         // 특정 데이터 업데이트 (+- 연산 가능)
         public void UpdateUserData(string key, int amount)
         {
-            if (!CheckFirebase()) return;
+            //if (!CheckFirebase()) return;
 
             FirebaseUser user = auth.CurrentUser;
             if (user == null)
@@ -374,8 +379,7 @@ namespace SignInSample
                     int currentValue = int.Parse(task.Result.Value.ToString());
                     int newValue = currentValue + amount;
                     dataRef.SetValueAsync(newValue);
-                    AddToInformation($"{key} updated successfully: {newValue}");
-                    LoadUserData();
+                    AddToInformation($"{key} updated successfully: {newValue}"); 
                 }
                 else
                 {
